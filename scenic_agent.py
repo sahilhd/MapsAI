@@ -1,9 +1,13 @@
 import os
+from dotenv import load_dotenv
 import googlemaps
 import polyline
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from models import RouteIntent  
+
+# Load environment variables from .env file
+load_dotenv()
 
 class ScenicRouteResponse(BaseModel):
     waypoints: List[Dict[str, Any]]  # [{"name": ..., "lat": ..., "lng": ...}, …]

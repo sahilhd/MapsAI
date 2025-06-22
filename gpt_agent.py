@@ -1,8 +1,12 @@
 # chatgpt_agent.py
 
 import os
+from dotenv import load_dotenv
 from openai import OpenAI
 from typing import Optional
+
+# Load environment variables from .env file
+load_dotenv()
 
 class ChatGPTAgent:
     """

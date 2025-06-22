@@ -1,8 +1,12 @@
 import os
+from dotenv import load_dotenv
 from typing import List, Dict
 import googlemaps
 from pydantic import BaseModel, Field
 from models import RouteIntent
+
+# Load environment variables from .env file
+load_dotenv()
 
 class RouteSummaryResponse(BaseModel):
     polyline: str = Field(..., description="Encoded overview polyline for the full route")

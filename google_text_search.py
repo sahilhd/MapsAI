@@ -1,5 +1,10 @@
 import requests
+import os
+from dotenv import load_dotenv
 from typing import Optional, Tuple, List, Dict
+
+# Load environment variables from .env file
+load_dotenv()
 
 class PlacesTextSearchClient:
     """
@@ -51,8 +56,11 @@ class PlacesTextSearchClient:
 
 
 if __name__ == "__main__":
-    # Replace with your actual Google Maps API key
-    API_KEY = "AIzaSyCjz4PzZapTFDmT8F31TYwK55xSfabs1kA"
+    # Get API key from environment variables
+    API_KEY = os.getenv("GOOGLE_API_KEY")
+    if not API_KEY:
+        raise ValueError("GOOGLE_API_KEY not found in environment variables")
+    
     client = PlacesTextSearchClient(API_KEY)
     
     # Example 1: Simple query with no location bias

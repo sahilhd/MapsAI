@@ -4,10 +4,14 @@ import os
 import json
 import re
 import googlemaps
+from dotenv import load_dotenv
 from typing import List, Dict, Any
 from pydantic import BaseModel
 from models import RouteIntent
 from gpt_agent import ChatGPTAgent
+
+# Load environment variables from .env file
+load_dotenv()
 
 class FallbackRouteMetrics(BaseModel):
     waypoints: List[Dict[str, Any]]
@@ -81,7 +85,7 @@ class FallbackAgent:
         def key(pt):
             return f"{pt.get('name')}|{pt.get('lat')}|{pt.get('lng')}"
 
-        # a) GPT’s origin
+        # a) GPT's origin
         if gpt_wpts:
             merged.append(gpt_wpts[0])
             seen.add(key(gpt_wpts[0]))
@@ -91,7 +95,7 @@ class FallbackAgent:
             if k not in seen:
                 merged.append(pt)
                 seen.add(k)
-        # c) GPT’s remaining waypoints
+        # c) GPT's remaining waypoints
         for pt in gpt_wpts[1:]:
             k = key(pt)
             if k not in seen:

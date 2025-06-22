@@ -1,6 +1,8 @@
 import re
 import json
 import requests
+import os
+from dotenv import load_dotenv
 import google_text_search
 from fitness_agent import FitnessAgent
 from scenic_agent import ScenicAgent
@@ -10,10 +12,12 @@ from models import LocationHint, RouteIntent
 from typing import Dict, Optional, Literal, Any
 from pydantic import BaseModel, validator
 
+# Load environment variables from .env file
+load_dotenv()
 
 # --- Configuration ---
-FETCH_AI_API_KEY = "sk_42a694967f184742b8572bda933b3718929a961f380247be8dffb0fa6a0168b6"  # Replace with your agent key
-GOOGLE_API_KEY = "AIzaSyCjz4PzZapTFDmT8F31TYwK55xSfabs1kA"  # Replace with your Google Maps API key
+FETCH_AI_API_KEY = os.getenv("FETCH_AI_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 # --- Data Models (Structured Output) ---
 class LocationHint(BaseModel):
     country: str

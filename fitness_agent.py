@@ -3,11 +3,15 @@
 import os
 import re
 import googlemaps
+from dotenv import load_dotenv
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from models import RouteIntent
 from google_text_search import PlacesTextSearchClient
 from gpt_agent import ChatGPTAgent
+
+# Load environment variables from .env file
+load_dotenv()
 
 class FitnessRouteMetrics(BaseModel):
     waypoints: List[Dict[str, Any]]
