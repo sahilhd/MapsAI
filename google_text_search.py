@@ -3,7 +3,7 @@ from typing import Optional, Tuple, List, Dict
 
 class PlacesTextSearchClient:
     """
-    Client for the Google Places Text Search API, returning only the top 3
+    Client for the Google Places Text Search API, returning only the top 
     results, each with name, formatted_address, latitude, and longitude.
     """
     def __init__(self, api_key: str):

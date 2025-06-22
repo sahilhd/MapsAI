@@ -4,6 +4,7 @@ import requests
 import google_text_search
 from fitness_agent import FitnessAgent
 from scenic_agent import ScenicAgent
+from fallback_agent import FallbackAgent    
 from polyline_agent import PolylineAgent
 from models import LocationHint, RouteIntent
 from typing import Dict, Optional, Literal, Any
@@ -216,25 +217,29 @@ if __name__ == "__main__":
     #     "Give me a scenic route from UC Berkeley to Castro Valley",
     #     "Give me a route from UC Berkeley to Bushrod Park, I want to take 10000 steps",
     #     "Create a date night with stops at an arcade and sushi place"
-    #     "I want to bike from UC Berkeley to Berkeley Bowl Marketplace, but stop at at grocery store on the way"
-    #     "Give me a 5 km walking route from UC Berkeley that burns at least 400 calories"
+    #     "I want to bike from UC Berkeley to Berkeley 2020 Oregon St, Berkeley, CA, but stop at at grocery store on the way"
     #     "I want a 10 000-step stroll starting and ending at 2601 Telegraph Ave, Berkeley."
     # ]
     
-    prompts = [
-        "I want a 10 000-step stroll starting and ending at 2601 Telegraph Ave, Berkeley"
+    # prompts = [
+    #     "I want a 10 000-step stroll starting and ending at 2601 Telegraph Ave, Berkeley"
+    # ]
+
+    # hPrompts = [
+    #     "I want a 10 000-step stroll starting and ending at 2601 Telegraph Ave, Berkeley",
+    #     "I want to bike from UC Berkeley to 2020 Oregon St, Berkeley, CA, but stop at at grocery store on the way",
+    #     "Give me a route from UC Berkeley to Bushrod Park, I want to take 10000 steps"
+    # ]
+
+    extraPrompts = [
+        "Fastest morning commute from Oakland to downtown SF",
+        "Build me a date-night route: first sushi, then an arcade, ending at a rooftop bar",
     ]
 
-    hPrompts = [
-        "I want a 10 000-step stroll starting and ending at 2601 Telegraph Ave, Berkeley",
-        "Give me a 5 km walking route from UC Berkeley that burns at least 100 calories",
-        "I want to bike from UC Berkeley to Berkeley Bowl Marketplace, but stop at at grocery store on the way",
-        "Give me a route from UC Berkeley to Bushrod Park, I want to take 10000 steps"
-    ]
     parser = FetchAIIntentParser()
     user_ipv6 = "2607:f140:6000:800e:384d:a5ee:7eb4:fa5e"  # From your context
     
-    for prompt in hPrompts:
+    for prompt in extraPrompts:
         try:
             intent = parser.parse_prompt(prompt, user_ipv6)
             print(f"Prompt: '{prompt}'\nResult: {intent.model_dump_json(indent=2)}\n")
@@ -245,6 +250,9 @@ if __name__ == "__main__":
             elif intent.intent_type == "Health":
                 fitnessAgent = FitnessAgent()
                 resp = fitnessAgent.get_fitness_route(intent)
+            else:
+                fallbackAgent = FallbackAgent()
+                resp = fallbackAgent.get_waypoints(intent)
 
             print(resp.model_dump_json(indent=2))
             polylineAgent = PolylineAgent()
