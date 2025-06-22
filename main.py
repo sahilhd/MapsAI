@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from fetchai_intent_parser import FetchAIIntentParser  # Assuming your code above is in this file
+from starter import FetchAIIntentParser
 from scenic_agent import ScenicAgent
 from fitness_agent import FitnessAgent
 from fallback_agent import FallbackAgent
