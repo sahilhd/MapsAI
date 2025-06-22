@@ -48,8 +48,8 @@ class FetchAIIntentParser:
     def _extract_location_hint(self, ipv6: str) -> Optional[LocationHint]:
         """Extract approximate location from IPv6 (US-centric)."""
         try:
-            if ipv6.startswith("2607:f140"):  # Known US IPv6 prefix
-                return LocationHint(country="US", region="East Coast")
+            # if ipv6.startswith("2607:f140"):  # Known US IPv6 prefix
+            #     return LocationHint(country="US", region="East Coast")
           
             return LocationHint(
                 country="US",
