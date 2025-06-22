@@ -19,8 +19,6 @@ A next-generation, AI-powered navigation app that transforms your natural langua
   - [6. Fitness Agent](#6-fitness-agent)
   - [7. Fallback Agent](#7-fallback-agent)
 - [Getting Started](#getting-started)
-- [Contributing](#contributing)
-- [License](#license)
 
 ---
 
