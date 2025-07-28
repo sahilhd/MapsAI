@@ -11,12 +11,15 @@ from polyline_agent import PolylineAgent
 from models import LocationHint, RouteIntent
 from typing import Dict, Optional, Literal, Any
 from pydantic import BaseModel, validator
+from nvidia_agent import NVIDIAAgent
 
 # Load environment variables from .env file
 load_dotenv()
 
 # --- Configuration ---
-FETCH_AI_API_KEY = os.getenv("FETCH_AI_API_KEY")
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
+if not NVIDIA_API_KEY:
+    raise ValueError("NVIDIA_API_KEY environment variable is required. Set it with: export NVIDIA_API_KEY=your_key_here")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 # --- Data Models (Structured Output) ---
 class LocationHint(BaseModel):
@@ -39,10 +42,10 @@ class RouteIntent(BaseModel):
     stops: Optional[list[Dict[str, Any]]] = None  # For multi-stop routes with enriched data
     location_hint: Optional[LocationHint] = None  # User's inferred location
 
-# --- Core ASI:One Intent Parser ---
-class FetchAIIntentParser:
+# --- Core NVIDIA Intent Parser ---
+class NVIDIAIntentParser:
     def __init__(self):
-        self.base_url = "https://api.asi1.ai/v1/chat/completions" 
+        self.nvidia_agent = NVIDIAAgent(api_key=NVIDIA_API_KEY) 
 
     # TODO: This is a placeholder for the actual location hint extraction.
     def _extract_location_hint(self, ipv6: str) -> Optional[LocationHint]:
@@ -123,72 +126,8 @@ class FetchAIIntentParser:
         return enriched_route_intent
 
     def _parse_to_structured(self, prompt: str, ipv6: str) -> Dict:
-        """Call ASI:One's NLP model to extract intent."""
-        headers = {
-            "Authorization": f"Bearer {FETCH_AI_API_KEY}",
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        }
-
-#         system_prompt_template = f"""
-# You are an intelligent route planning assistant. Your task is to parse a user's natural language
-# request and convert it into a structured JSON object. You must extract the following information:
-# - intent_type: Classify the user's goal. Must be one or more of: "Health", "Scenic", "Eco-conscious", "Tourist", "Cycling, "Nightlife", "Other".
-# - origin: The starting point of the route. If it's "my location" or similar, use that exact phrase.
-# - destination: The end point of the route.
-# - constraints: A list of any special conditions, like "100-calorie walking route" or "date night" or "multi modal".
-# - stops: If the user mentions multiple stops, list them here as an array of dictionaries (e.g., [{{name: place, address: address}}]). If no stops, this can be omitted.
-
-# The user's location hint (based on IP {ipv6}) can be used for context.
-# Respond ONLY with the raw JSON object, without any explanatory text or markdown formatting.
-# """
-        system_prompt_template = f"""
-You are an intelligent route-planning assistant. Parse the user's request into JSON with:
-- intent_type: one of: "Health", "Scenic", "Eco-conscious", "Commute", "Transit", "Event", "Road-Trip", "Other".
-- origin: starting point ("UC Berkeley" if unspecified).
-- destination: end point.
-- travel_modes: array of one or more modes in preferred order, any of ["driving", "walking", "bicycling", "transit"]. Use "driving" if nothing mentioned.
-- departure_time / arrival_time: optional ISO timestamps for routing with traffic or schedules.
-- constraints: list of conditions (e.g. "avoid tolls", "burn 100 calories, "date night", "x km").
-- avoid: list of route features to avoid (tolls, highways, ferries).
-- stops: If the user mentions multiple stops, list them here as an array of dictionaries (e.g., [{{name: place}}]). If no stops, this can be omitted.
-- optimize_waypoints: boolean (true to reorder stops for shortest trip).
-User IP hint: {ipv6}.  
-Respond ONLY with the raw JSON object, without any explanatory text or markdown formatting.
-"""
-
-
-        payload = {
-            "model": "asi1-mini",
-            "messages": [
-                {
-                    "role": "system",
-                    "content": system_prompt_template
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "temperature": 0.1,  # Lower temperature for more predictable JSON
-            "max_tokens": 1000
-        }
-        
-        response = requests.post(self.base_url, headers=headers, json=payload)
-        response.raise_for_status()
-
-        # The API returns a chat completion object. We need to extract and parse the content.
-        api_response = response.json()
-        content = api_response['choices'][0]['message']['content']
-        
-        # Actively find and extract the JSON object from the response string
-        match = re.search(r'\{.*\}', content, re.DOTALL)
-        
-        if match:
-            json_string = match.group(0)
-            return json.loads(json_string)
-        
-        raise ValueError("Could not find a valid JSON object in the AI's response.")
+        """Call NVIDIA's NLP model to extract intent."""
+        return self.nvidia_agent.parse_intent(prompt, ipv6)
 
     def parse_prompt(self, prompt: str, user_ipv6: str) -> RouteIntent:
         """Main function: Parse natural language into a RouteIntent object."""
@@ -240,7 +179,7 @@ if __name__ == "__main__":
         "Build me a date-night route: first sushi, then an arcade, ending at a rooftop bar",
     ]
 
-    parser = FetchAIIntentParser()
+    parser = NVIDIAIntentParser()
     user_ipv6 = "2607:f140:6000:800e:384d:a5ee:7eb4:fa5e"  # From your context
     
     for prompt in extraPrompts:

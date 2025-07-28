@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from models import RouteIntent
 from google_text_search import PlacesTextSearchClient
-from gpt_agent import ChatGPTAgent
+from nvidia_agent import NVIDIAAgent
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,16 +28,13 @@ class FitnessAgent:
     MET_VALUES = {"walking": 3.3, "bicycling": 6.0}
     DEFAULT_WEIGHT_KG = 70
 
-    def __init__(
-        self,
-        maps_key: str = None,
-        places_key: str = None,
-        openai_key: str = None,
-        gpt_model: str = "gpt-3.5-turbo"
-    ):
+    def __init__(self, maps_key: str = None, places_key: str = None, nvidia_key: str = None):
         self.gmaps = googlemaps.Client(key=maps_key or os.getenv("GOOGLE_MAPS_API_KEY"))
         self.places = PlacesTextSearchClient(places_key or os.getenv("GOOGLE_MAPS_API_KEY"))
-        self.gpt = ChatGPTAgent(api_key=openai_key or os.getenv("OPENAI_API_KEY"), model=gpt_model)
+        nvidia_api_key = nvidia_key or os.getenv("NVIDIA_API_KEY")
+        if not nvidia_api_key:
+            print("⚠️  WARNING: NVIDIA_API_KEY not found, using mock mode")
+        self.nvidia = NVIDIAAgent(api_key=nvidia_api_key)
 
     def _geocode(self, addr: str) -> Dict[str, float]:
         res = self.gmaps.geocode(addr)
@@ -132,29 +129,25 @@ class FitnessAgent:
             end_loc = route["legs"][-1]["end_location"]
             out.append({"name": dest, "lat": end_loc["lat"], "lng": end_loc["lng"]})
 
-        # 6) If constraints unmet, ask GPT for extras
+        # 6) If constraints unmet, ask NVIDIA model for extras
         unmet = (
             (target_m   and total_dist < target_m) or
             (steps_m    and total_dist < steps_m) or
             (target_cal and calories < target_cal)
         )
         if unmet:
-            prompt = (
-                f"I have a {mode} route with waypoints {out!r}, "
-                f"distance {total_dist} m, duration {total_dur} s, "
-                f"calories {calories:.1f} kcal. "
-                f"Constraints: {intent.constraints}. "
-                "Suggest up to 3 extra waypoints as a JSON array "
-                "[{\"name\":...,\"lat\":...,\"lng\":...}] to satisfy these."
+            current_metrics = {
+                "distance_m": total_dist,
+                "duration_s": total_dur,
+                "calories": calories
+            }
+            extras = self.nvidia.optimize_fitness_route(
+                current_route=out,
+                constraints=intent.constraints,
+                mode=mode,
+                current_metrics=current_metrics
             )
-            gpt_resp = self.gpt.chat(prompt, temperature=0.2, max_tokens=300)
-            import json, re as _re
-            if m := _re.search(r"\[.*\]", gpt_resp, flags=_re.DOTALL):
-                try:
-                    extras = json.loads(m.group(0))
-                    out.extend(extras)
-                except json.JSONDecodeError:
-                    pass
+            out.extend(extras)
 
         return FitnessRouteMetrics(
             waypoints=out,

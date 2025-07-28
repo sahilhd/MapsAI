@@ -10,8 +10,8 @@ requests==2.32.4
 # Google Maps API client
 googlemaps==4.10.0
 
-# OpenAI API client
-openai==1.90.0
+# NVIDIA API client (using requests for now)
+# openai==1.90.0  # Commented out - replaced with NVIDIA models
 
 # Data validation and serialization
 pydantic==2.11.7

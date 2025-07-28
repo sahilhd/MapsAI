@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from typing import List, Dict, Any
 from pydantic import BaseModel
 from models import RouteIntent
-from gpt_agent import ChatGPTAgent
+from nvidia_agent import NVIDIAAgent
 
 # Load environment variables from .env file
 load_dotenv()
@@ -20,13 +20,15 @@ class FallbackAgent:
     """
     Handles all non-Health intents by:
       1) Prepending any GSR stops after the origin
-      2) Delegating to ChatGPT for the full route waypoints
+      2) Delegating to NVIDIA models for the full route waypoints
       3) Merging them into one ordered list without duplicates
     """
-    def __init__(self, maps_key=None, openai_key=None, model="gpt-3.5-turbo"):
+    def __init__(self, maps_key=None, nvidia_key=None):
         self.gmaps = googlemaps.Client(key=maps_key or os.getenv("GOOGLE_MAPS_API_KEY"))
-        self.gpt   = ChatGPTAgent(api_key=openai_key or os.getenv("OPENAI_API_KEY"),
-                                  model=model)
+        nvidia_api_key = nvidia_key or os.getenv("NVIDIA_API_KEY")
+        if not nvidia_api_key:
+            print("⚠️  WARNING: NVIDIA_API_KEY not found, using mock mode")
+        self.nvidia = NVIDIAAgent(api_key=nvidia_api_key)
 
     def _geocode_name(self, place_name: str) -> Dict[str, float]:
         resp = self.gmaps.geocode(place_name)
@@ -48,30 +50,8 @@ class FallbackAgent:
                         "lng": g["longitude"]
                     })
 
-        # 2) Ask GPT for full waypoint list
-        prompt = (
-            f"You are a route planner.\n"
-            f"Intent: {intent.intent_type}\n"
-            f"Origin: {intent.origin}\n"
-            f"Destination: {intent.destination or intent.origin}\n"
-            f"Travel modes: {intent.travel_modes or ['driving']}\n"
-            f"Constraints: {intent.constraints}\n"
-            f"Avoid: {intent.avoid or []}\n"
-            f"Stops: {intent.stops or []}\n\n"
-            "Return ONLY a JSON array of waypoints "
-            "[{\"name\":...,\"lat\":...,\"lng\":...},…]. No explanation."
-        )
-        raw = self.gpt.chat(prompt, temperature=0.1, max_tokens=300)
-
-        # 3) Extract JSON array
-        start, end = raw.find("["), raw.rfind("]")
-        if start == -1 or end == -1:
-            raise RuntimeError("No JSON array found in GPT response")
-        arr_text = raw[start:end+1]
-        try:
-            gpt_wpts = json.loads(arr_text)
-        except json.JSONDecodeError as e:
-            raise RuntimeError(f"Invalid JSON from GPT: {e}\nRaw: {raw}")
+        # 2) Ask NVIDIA model for full waypoint list
+        gpt_wpts = self.nvidia.plan_route(intent.model_dump())
 
         # 4) Geocode any placeholder coordinates
         for wp in gpt_wpts:
@@ -85,7 +65,7 @@ class FallbackAgent:
         def key(pt):
             return f"{pt.get('name')}|{pt.get('lat')}|{pt.get('lng')}"
 
-        # a) GPT's origin
+        # a) NVIDIA model's origin
         if gpt_wpts:
             merged.append(gpt_wpts[0])
             seen.add(key(gpt_wpts[0]))
@@ -95,7 +75,7 @@ class FallbackAgent:
             if k not in seen:
                 merged.append(pt)
                 seen.add(k)
-        # c) GPT's remaining waypoints
+        # c) NVIDIA model's remaining waypoints
         for pt in gpt_wpts[1:]:
             k = key(pt)
             if k not in seen:

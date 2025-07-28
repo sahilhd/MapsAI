@@ -102,11 +102,71 @@ At its core, Navi orchestrates multiple specialized AI agents alongside Google M
     ```
 3. **Set** your API keys:  
     ```bash
-    export GOOGLE_MAPS_API_KEY=...
-    export GOOGLE_PLACES_API_KEY=...
-    export OPENAI_API_KEY=...
+    # Set your API keys
+    export GOOGLE_MAPS_API_KEY=your_google_maps_key_here
+    export NVIDIA_API_KEY=your_nvidia_key_here
+
+    # Install dependencies
+    pip install -r requirements.txt
+
+    # Run the server
+    python main.py
     ```
-4. **Run** the starter script:  
-    ```bash
-    python starter.py
-    ```
+
+## 🚀 NVIDIA Model Integration
+
+This project has been refactored to use NVIDIA-based models instead of OpenAI GPT models for all agentic components:
+
+### **Refactored Components:**
+
+1. **FetchAI Intent Parser** → **NVIDIA Intent Parser**
+   - Uses NVIDIA's `nvidia/llama3-8b-instruct` model
+   - Handles natural language to structured intent conversion
+   - Improved performance and cost efficiency
+
+2. **GPT Agent** → **NVIDIA Agent**
+   - Replaced OpenAI GPT-3.5-turbo with NVIDIA models
+   - Specialized methods for different use cases:
+     - `parse_intent()`: Intent classification
+     - `plan_route()`: Route waypoint generation
+     - `optimize_fitness_route()`: Fitness route optimization
+     - `chat()`: General conversation
+
+3. **Fallback Agent** → **NVIDIA-powered Fallback**
+   - Uses NVIDIA models for route planning
+   - Maintains same functionality with better performance
+
+4. **Fitness Agent** → **NVIDIA-powered Fitness**
+   - NVIDIA models for fitness route optimization
+   - Enhanced calorie and step goal optimization
+
+### **Benefits of NVIDIA Integration:**
+
+- **Lower Latency**: Direct API calls to NVIDIA's infrastructure
+- **Cost Reduction**: No per-token pricing from OpenAI
+- **Better Performance**: Optimized models for specific tasks
+- **Privacy**: Enhanced data privacy with NVIDIA's infrastructure
+- **Scalability**: Better handling of concurrent requests
+
+### **Model Selection:**
+
+The refactoring uses NVIDIA's `nvidia/llama3-8b-instruct` model for all tasks, which provides:
+- Excellent structured output capabilities
+- Good performance on route planning tasks
+- Consistent JSON generation
+- Fast inference times
+
+## 🔐 Environment Setup
+
+Create a `.env` file or export environment variables:
+
+```bash
+# Required API Keys
+export GOOGLE_MAPS_API_KEY=your_google_maps_key_here
+export NVIDIA_API_KEY=your_nvidia_key_here
+
+# Optional
+export GOOGLE_API_KEY=your_google_places_key_here
+```
+
+⚠️ **Security Note**: Never commit API keys to version control. Always use environment variables.
