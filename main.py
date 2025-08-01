@@ -1,6 +1,7 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string, send_from_directory
 import logging
 import traceback
+import os
 from starter import NVIDIAIntentParser
 from scenic_agent import ScenicAgent
 from fitness_agent import FitnessAgent
@@ -11,7 +12,7 @@ from polyline_agent import PolylineAgent
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 parser = NVIDIAIntentParser()
 
 @app.route('/api/route', methods=['POST'])
@@ -68,24 +69,49 @@ def get_route():
 @app.route('/health', methods=['GET'])
 def health_check():
     """Simple health check endpoint"""
-    return jsonify({"status": "healthy", "message": "NVIDIA Navigation API is running"}), 200
+    return jsonify({"status": "healthy", "message": "MapsAI - NVIDIA Powered Navigation API is running"}), 200
 
 @app.route('/', methods=['GET'])
 def home():
-    """Home endpoint with API information"""
-    return jsonify({
-        "message": "NVIDIA Navigation API",
-        "endpoints": {
-            "POST /api/route": "Submit navigation request",
-            "GET /health": "Health check",
-            "GET /": "This help message"
-        },
-        "example_request": {
-            "prompt": "Give me a scenic route from UC Berkeley to Castro Valley",
-            "ipv6": "optional_ipv6_for_location_context"
-        }
-    }), 200
+    """Serve the main webapp interface"""
+    try:
+        file_path = os.path.join(app.static_folder, 'index.html')
+        logger.info(f"Attempting to serve webapp from: {file_path}")
+        with open(file_path, 'r') as f:
+            content = f.read()
+            logger.info("Successfully loaded webapp HTML")
+            return content
+    except FileNotFoundError as e:
+        logger.error(f"Webapp file not found: {e}")
+        return jsonify({
+            "message": "🚀 Welcome to MapsAI - NVIDIA Powered Navigation API",
+            "version": "2.0",
+            "endpoints": {
+                "/api/route": "POST - Get intelligent route recommendations",
+                "/health": "GET - Health check"
+            },
+            "powered_by": "NVIDIA AI Models",
+            "webapp": "Interactive chatbot interface not found. Please check static files."
+        }), 200
+    except Exception as e:
+        logger.error(f"Error serving webapp: {e}")
+        return jsonify({"error": "Unable to load webapp"}), 500
+
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    """Serve static files"""
+    return send_from_directory(app.static_folder, filename)
+
+@app.route('/debug')
+def debug():
+    """Debug page for troubleshooting"""
+    try:
+        with open(os.path.join(app.static_folder, 'debug.html'), 'r') as f:
+            return f.read()
+    except FileNotFoundError:
+        return jsonify({"error": "Debug page not found"}), 404
 
 if __name__ == '__main__':
     logger.info("Starting Flask application on port 8000...")
-    app.run(debug=True, host='0.0.0.0', port=8000)
+    print("🚀 Starting MapsAI - NVIDIA Powered Navigation API on port 8000...")
+    app.run(debug=False, host='127.0.0.1', port=8000)
